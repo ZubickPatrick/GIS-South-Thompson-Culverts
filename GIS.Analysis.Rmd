@@ -11,7 +11,45 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## here we will acquire the basemaps and CU boundary shapefiles for the GIS work we are doing with Simon.
 
+## first need to get my packages of interest and most use
+
 ```{r}
-DOES THIS WORK...
+library(tidyverse)
+library(raster)
+library(RCurl)
+library(sf)
+
+# dont think I will need more packages but can add more if need be
+
+```
+
+```{r}
+
+# URL of the basemap shapefile
+url <- "https://ftp.maps.canada.ca/pub/nrcan_rncan/vector/framework_cadre/Atlas_of_Canada_15M/"
+
+# Download the shapefile from the URL
+temp_file <- tempfile()
+download.file(url, temp_file)
+
+# Read the shapefile into R using sf
+bc_basemap <- st_read(temp_file)
+
+
+bc_basemap <- raster("path/to/basemap/image.tif")
+
+# Plot the map
+plot(bc_basemap)
+
+
+# Load the basemap image
+bc_basemap <- raster("path/to/basemap/image.tif")
+
+# Plot the map
+plot(bc_basemap)
+
+
+
+
 ```
 
