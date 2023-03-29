@@ -1,0 +1,17 @@
+---
+title: "GIS-South-Thompson"
+author: "Patrick Zubick"
+date: "2023-03-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## here we will acquire the basemaps and CU boundary shapefiles for the GIS work we are doing with Simon.
+
+```{r}
+DOES THIS WORK...
+```
+
