@@ -76,7 +76,14 @@ plot(shapefile.chinook)
 ggplot() + 
   geom_sf(data = bc) + 
   geom_sf(data = shapefile.chinook)
-         
+      
+plot(bc)
+
+ggplot() + 
+geom_sf(data = bc) +
+   geom_sf(data = shapefile.chinook)
+
+   
 # not exascly what we want... does not quite line up... neeed to get them both on the same coord system.. 
 
 st_crs(bc)
@@ -119,7 +126,7 @@ st_write(my_subset, "path/to/new/shapefile.shp")
 
 # should work tho which is nice...
 
-
+# want to buiild a map of our study area, thjat includes streams, CU for chinook, sockeye and coho, and overlays a gradient of barrier counts? or stream crossings in general? coudl be a nice visualization
 
 ```
 
