@@ -27,6 +27,7 @@ library(ggplot2)
 library(ggsn)
 library(tidyverse)
 library(here)
+library(ggmap)
 
 # dont think I will need more packages but can add more if need be
 
@@ -36,8 +37,88 @@ library(here)
 
 # can i visualize the chinook shapefile
 
+# Read in the shapefiles for my species of interest... CHinook, Coho and Sockeye...
+
+shapefile.coho <- st_read("CO_CU_BOUNDARY_EN.shp")
+shapefile.coho
+
+shapefile.chinook <- st_read("CK_CU_BOUNDARY_EN.shp")
+shapefile.chinook
+
+shapefile.sox <- st_read("SEL_CU_BOUNDARY_En.shp")
+shapefile.sox
+
+# all shapefiles seem good, need a base map to overlay on and see whats up....
+
+# pull in basemap shapefile...
+
+bc <- st_read("land.shp", quiet = TRUE)
+plot(bc)
+
+# Define the bounding box
+bbox <- st_bbox(c(xmin = -124, ymin = 48, xmax = -114, ymax = 53), crs = st_crs(bc))
+
+# Crop the shapefile to the bounding box
+bc_cropped <- st_crop(bc, bbox)
+
+chinook_cropped = st_crop(shapefile.chinook, bbox)
+
+# Plot the cropped shapefile
+ggplot() + 
+  geom_sf(data = bc_cropped)+
+  geom_sf(data = chinook_cropped)
+
+
+
+plot(shapefile.chinook)
+
+
+ggplot() + 
+  geom_sf(data = bc) + 
+  geom_sf(data = shapefile.chinook)
+         
+# not exascly what we want... does not quite line up... neeed to get them both on the same coord system.. 
+
+st_crs(bc)
+st_crs(shapefile.chinook)
+
+# i think I should swithc to all using the chinook coord system so will try that next time.. 
+shapefile.chinook <- st_transform(shapefile.chinook, crs = st_crs(bc))
+
+
+# Plot the maps
+ggplot() + 
+  geom_sf(data = bc) + 
+  geom_sf(data = shapefile.chinook) +
+  coord_sf(crs = st_crs(bc))
+
+# Filter the dataset to only include the "Zone A" and "Zone B" management areas
+zone_ab <- subset(shapefile.chinook, zone %in% c("A", "B"))
+
+# Plot the "Zone A" and "Zone B" management areas
+ggplot() + 
+  geom_sf(data = bc) + 
+  geom_sf(data = zone_ab)
+
+```
+# snip out CU of interest in south thompson 
+
+
+```{r}
 # Read in the shapefile
-shapefile <- st_read("CK_CU_BOUNDARY_En.shp")
+my_shapefile <- st_read("path/to/my/shapefile.shp")
+
+# Create a vector of the polygon names you want to keep --> need to know the names of my polygons...
+polygons_of_interest <- c("name1", "name2", "name3")
+
+# Subset the shapefile based on the polygon names
+my_subset <- st_subset(my_shapefile, NAME %in% polygons_of_interest)
+
+# Write the subsetted shapefile to a new file
+st_write(my_subset, "path/to/new/shapefile.shp")
+
+# should work tho which is nice...
+
 
 
 ```
