@@ -28,6 +28,8 @@ library(ggsn)
 library(tidyverse)
 library(here)
 library(ggmap)
+library(cowplot)
+library(ggpubr)
 
 # dont think I will need more packages but can add more if need be
 
@@ -68,20 +70,31 @@ ggplot() +
   geom_sf(data = bc_cropped)+
   geom_sf(data = chinook_cropped)
 
-
-
 plot(shapefile.chinook)
-
 
 ggplot() + 
   geom_sf(data = bc) + 
   geom_sf(data = shapefile.chinook)
       
+str(bc)
+st_crs(bc) # WGS 84
+# transform to UTMs
+bcUTM <- st_transform(bc, crs = 3157) # 3157 is the CRS for UTM zone 10
+
+str(shapefile.chinook)
+st_crs(shapefile.chinook) # WGS 84
+# transform to UTMs
+
+chinookUTM <- st_transform(shapefile.chinook, crs = 3157) # 3157 is the CRS for UTM zone 10
+str(chinookUTM)
+st_crs(chinookUTM) # WGS 84
+# transform to UTMs
+
 plot(bc)
 
 ggplot() + 
-geom_sf(data = bc) +
-   geom_sf(data = shapefile.chinook)
+geom_sf(data = bcUTM) +
+   geom_sf(data = chinookUTM)
 
    
 # not exascly what we want... does not quite line up... neeed to get them both on the same coord system.. 
@@ -108,23 +121,317 @@ ggplot() +
   geom_sf(data = zone_ab)
 
 ```
+```{r}
+# try with new shape file from the workshop..
+
+# rnaturalearth
+north.america <- rnaturalearth::ne_countries(scale = "large", continent = "north america",
+                                             returnclass = "sf")
+
+shapefile.coho <- st_read("CO_CU_BOUNDARY_EN.shp")
+shapefile.coho
+
+shapefile.chinook <- st_read("CK_CU_BOUNDARY_EN.shp")
+shapefile.chinook
+
+shapefile.sox <- st_read("SEL_CU_BOUNDARY_En.shp")
+shapefile.sox
+
+str(north.america)
+st_crs(north.america) # WGS 84
+
+str(shapefile.chinook)
+st_crs(shapefile.chinook) # WGS 8
+
+# transform to UTMs
+bcUTM <- st_transform(north.america, crs = 3157) # 3157 is the CRS for UTM zone 10
+chinookUTM <- st_transform(shapefile.chinook, crs = 3157) # 3157 is the CRS for UTM zone 10
+cohoUTM <- st_transform(shapefile.coho, crs = 3157) # 3157 is the CRS for UTM zone 10
+sockeyeUTM <- st_transform(shapefile.sox, crs = 3157) # 3157 is the CRS for UTM zone 10
+
+
+
+# try to add CU
+
+ggplot() + 
+geom_sf(data = bcUTM) +
+   geom_sf(data = chinookUTM)
+
+
+# map
+
+# convert UTM eastings and northings from metres into kilometres for all shapefiles
+bcUTM$geometry <- bcUTM$geometry/1000
+chinookUTM$geometry <- chinookUTM$geometry/1000
+cohoUTM$geometry <- cohoUTM$geometry/1000
+sockeyeUTM$geometry <- sockeyeUTM$geometry/1000
+
+
+# map
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = chinookUTM ,  aes(fill = CU_NAME), show.legend = FALSE)+
+  scale_x_continuous(limits = c(600, 1100), breaks = c(600, 850, 1100)) +
+  scale_y_continuous(limits = c(5450, 5650), breaks = c(5300, 5400, 5500, 5600)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# that looks unreal, need to select out the CU i Want to include in my map....
+
+# and then subesquently in the file I will send to simon....
+
+
+```
+
 # snip out CU of interest in south thompson 
 
 
 ```{r}
-# Read in the shapefile
-my_shapefile <- st_read("path/to/my/shapefile.shp")
+
+# i have my UTM shapefiles for each CU, chinookUTM, sockeyeUTM, cohoUTM
+# need to know the namesI need.. str$CU_NAME
+
+# need to keep these ones... "Shuswap River_SU_0.3" ,"South Thompson_SU_0.3" ,"Upper Adams River_SU_x.x", "Lower Thompson_SP_1.2" , "South Thompson-Bessette Creek_SU_1.2", "South Thompson_SU_1.3"   
+
 
 # Create a vector of the polygon names you want to keep --> need to know the names of my polygons...
-polygons_of_interest <- c("name1", "name2", "name3")
+chinook.CU <- c("Shuswap River_SU_0.3" ,"South Thompson_SU_0.3" ,"Upper Adams River_SU_x.x", "Lower Thompson_SP_1.2" , "South Thompson-Bessette Creek_SU_1.2", "South Thompson_SU_1.3"   )
 
 # Subset the shapefile based on the polygon names
-my_subset <- st_subset(my_shapefile, NAME %in% polygons_of_interest)
+chinook.CU.polygons <- subset(chinookUTM, CU_NAME %in% chinook.CU)
 
 # Write the subsetted shapefile to a new file
-st_write(my_subset, "path/to/new/shapefile.shp")
+st_write(chinook.CU.polygons, "chinook.CU.ST.shp")
 
 # should work tho which is nice...
+
+# lets see how this looks in a map??
+
+# map just BC
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = chinook.CU.polygons,  aes(fill = CU_NAME))+scale_x_continuous(limits = c(0, 2000)) +
+  scale_y_continuous(limits = c(5000, 6000)) +
+  theme_bw()
+
+# smaller area mappppp
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = chinook.CU.polygons,  aes(fill = CU_NAME))+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# that looks awesome, lets replicate the sucess with the other CU for sockeye and coho
+
+
+# coho now... 
+# just plot a bc map with coho to see how it looks and ensure it looks fine..
+
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = cohoUTM,  aes(fill = CU_NAME), show.legend = FALSE)+scale_x_continuous(limits = c(0, 2000)) +
+  scale_y_continuous(limits = c(5000, 6000)) +
+  theme_bw()
+
+# perfect, now need to select out my CU of interest for coho
+
+(cohoUTM$CU_NAME)
+
+# need "Lower Thompson" ,"South Thompson" 
+
+# Create a vector of the polygon names you want to keep --> need to know the names of my polygons...
+coho.CU <- c("Lower Thompson" ,"South Thompson")
+
+# Subset the shapefile based on the polygon names
+coho.CU.polygons <- subset(cohoUTM, CU_NAME %in% coho.CU)
+
+# Write the subsetted shapefile to a new file
+st_write(coho.CU.polygons, "coho.CU.ST.shp")
+
+# map just BC
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = coho.CU.polygons,  aes(fill = CU_NAME))+scale_x_continuous(limits = c(0, 2000)) +
+  scale_y_continuous(limits = c(5000, 6000)) +
+  theme_bw()
+
+
+
+# smaller area mappppp
+
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = coho.CU.polygons,  aes(fill = CU_NAME))+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# perfect lets go to the sockeye world
+
+
+# just plot a bc map with sockeye to see how it looks and ensure it looks fine..
+
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = sockeyeUTM,  aes(fill = CU_NAME), show.legend = FALSE)+scale_x_continuous(limits = c(0, 2000)) +
+  scale_y_continuous(limits = c(5000, 6000)) +
+  theme_bw()
+
+# that looks fine but it really omits the rivers+spawning areas looks like the CU are based on rearing lakes...
+
+# perfect, now need to select out my CU of interest for sockeye
+
+(sockeyeUTM$CU_NAME)
+
+# need "Shuswap Complex-Late Timing",  "Kamloops-Early Summer Timing", "Shuswap Complex-Early Summer Timing, "(p)Adams and Momich Lakes-Early Summer Timing"
+
+# Create a vector of the polygon names you want to keep --> need to know the names of my polygons...
+sockeye.CU <- c("Shuswap Complex-Late Timing",  "Kamloops-Early Summer Timing", "Shuswap Complex-Early Summer Timing", "(p)Adams and Momich Lakes-Early Summer Timing")
+
+# Subset the shapefile based on the polygon names
+sockeye.CU.polygons <- subset(sockeyeUTM, CU_NAME %in% sockeye.CU)
+
+# Write the subsetted shapefile to a new file
+st_write(sockeye.CU.polygons, "sockeye.CU.ST.shp")
+
+# map just BC
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = sockeye.CU.polygons,  aes(fill = CU_NAME))+scale_x_continuous(limits = c(0, 2000)) +
+  scale_y_continuous(limits = c(5000, 6000)) +
+  theme_bw()
+
+# smaller area mappppp
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = sockeye.CU.polygons,  aes(fill = CU_NAME))+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# i do not really know how to compartmentalize that but oh whale....because the CU are clearly by rearing lakes...
+
+# lets see if I can drop all my CU on one map?!?!?!
+
+# likley best to put on 3 adjoining maps but I am feeling crazy...
+
+# smaller area mappppp
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = sockeye.CU.polygons,  aes(fill = CU_NAME))  + geom_sf(data = coho.CU.polygons,  aes(fill = CU_NAME))  + geom_sf(data = chinook.CU.polygons,  aes(fill = CU_NAME))+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+
+# i suppose thats okay..should probs put them side by side...with no legend..
+
+sockeye.cu.st = ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = sockeye.CU.polygons,  aes(fill = CU_NAME), show.legend = FALSE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+coho.cu.st = ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = coho.CU.polygons,  aes(fill = CU_NAME), show.legend = FALSE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+chinook.cu.st = ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = chinook.CU.polygons,  aes(fill = CU_NAME), show.legend = FALSE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# Arrange the plots side by side
+
+plot_grid(chinook.cu.st, coho.cu.st, sockeye.cu.st, ncol = 3)
+
+ggarrange(chinook.cu.st, coho.cu.st, sockeye.cu.st, ncol = 3, labels = c("Chinook CU", "Coho CU", "Sockeye CU"))
+
+# try one more thing then carry on and probs send simon the information...
+
+sockeye.cu.st = ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = sockeye.CU.polygons,  aes(fill = CU_NAME), show.legend = TRUE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+coho.cu.st = ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = coho.CU.polygons,  aes(fill = CU_NAME), show.legend = TRUE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+chinook.cu.st = ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = chinook.CU.polygons,  aes(fill = CU_NAME), show.legend = TRUE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# Arrange the plots side by side
+
+plot_grid(chinook.cu.st, coho.cu.st, sockeye.cu.st, ncol = 3)
+
+ggarrange(chinook.cu.st, coho.cu.st, sockeye.cu.st, ncol = 3, labels = c("Chinook CU", "Coho CU", "Sockeye CU") ,common.legend = TRUE,legend = "bottom", widths = c(0.3, 0.3, 0.3),heights = c(0.5, 0.5, 0.2))
+
+# try one more thing then carry on and probs send simon the information...
+
+# going to leave as is i think...
+
+# would be nice to overlay stream network... but that can wait... 
+
+# lets see the sockeye lines... need to set coord system and all that jazzzzz...
+
+shapefile.sox.lines <- readOGR(dsn = "C:/Users/patch/OneDrive/Desktop/MSc-Culvert/GIS-Analysis/GIS-South-Thompson-Culverts", layer = "sockeye.spawning_lines_fraser")
+
+# Convert SpatialLinesDataFrame object to sf object
+shapefile.sox.lines.UTM_sf <- st_as_sf(shapefile.sox.lines.UTM)
+
+shapefile.sox.lines<- st_transform(shapefile.sox.lines.UTM_sf, crs = 3157) # 3157 is the CRS for UTM zone 10
+str(shapefile.sox.lines)
+
+# convert UTM eastings and northings from metres into kilometres for all shapefiles
+shapefile.sox.lines$geometry <- shapefile.sox.lines$geometry/1000
+
+
+# Plot lines as solid, and then zoom in... 
+ggplot() + 
+  geom_sf(data = bcUTM) +
+  geom_sf(data = shapefile.sox.lines)
+
+
+# zoom in.. 
+sockeye.lines.cu.st = ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = shapefile.sox.lines,  aes(fill = Species), show.legend = TRUE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+sockeye.lines.cu.st
+
+# i just want sockeye lake type... 
+
+str(shapefile.sox.lines)
+
+unique(shapefile.sox.lines$Species)
+
+
+# Create a vector of the polygon names you want to keep --> need to know the names of my polygons...
+sockeye.lines.CU <- c("river sockeye")
+
+# Subset the shapefile based on the polygon names
+sockeye.CU.lines <- subset(shapefile.sox.lines, Species %in% sockeye.lines.CU)
+
+# Write the subsetted shapefile to a new file
+st_write(sockeye.CU.lines, "sockeye.lines.CU.ST.shp")
+
+# zoom in.. 
+sockeye.lines.cu.st = ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = sockeye.CU.lines,  aes(fill = Species), show.legend = TRUE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+sockeye.lines.cu.st
+
+# add this to the CU map..
+
+ ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = sockeye.CU.polygons)+geom_sf(data = sockeye.CU.lines,  aes(fill = Species), show.legend = TRUE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+
+# add this to the CU map..
+
+ # looks okay can cut it out if need be i suppose...
+
+```
 
 # want to buiild a map of our study area, thjat includes streams, CU for chinook, sockeye and coho, and overlays a gradient of barrier counts? or stream crossings in general? coudl be a nice visualization
 
