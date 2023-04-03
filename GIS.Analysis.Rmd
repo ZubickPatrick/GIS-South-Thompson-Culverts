@@ -63,13 +63,6 @@ bbox <- st_bbox(c(xmin = -124, ymin = 48, xmax = -114, ymax = 53), crs = st_crs(
 # Crop the shapefile to the bounding box
 bc_cropped <- st_crop(bc, bbox)
 
-chinook_cropped = st_crop(shapefile.chinook, bbox)
-
-# Plot the cropped shapefile
-ggplot() + 
-  geom_sf(data = bc_cropped)+
-  geom_sf(data = chinook_cropped)
-
 plot(shapefile.chinook)
 
 ggplot() + 
@@ -111,14 +104,6 @@ ggplot() +
   geom_sf(data = bc) + 
   geom_sf(data = shapefile.chinook) +
   coord_sf(crs = st_crs(bc))
-
-# Filter the dataset to only include the "Zone A" and "Zone B" management areas
-zone_ab <- subset(shapefile.chinook, zone %in% c("A", "B"))
-
-# Plot the "Zone A" and "Zone B" management areas
-ggplot() + 
-  geom_sf(data = bc) + 
-  geom_sf(data = zone_ab)
 
 ```
 ```{r}
@@ -199,7 +184,7 @@ chinook.CU <- c("Shuswap River_SU_0.3" ,"South Thompson_SU_0.3" ,"Upper Adams Ri
 chinook.CU.polygons <- subset(chinookUTM, CU_NAME %in% chinook.CU)
 
 # Write the subsetted shapefile to a new file
-st_write(chinook.CU.polygons, "chinook.CU.ST.shp")
+##st_write(chinook.CU.polygons, "chinook.CU.ST.shp")
 
 # should work tho which is nice...
 
@@ -241,7 +226,7 @@ coho.CU <- c("Lower Thompson" ,"South Thompson")
 coho.CU.polygons <- subset(cohoUTM, CU_NAME %in% coho.CU)
 
 # Write the subsetted shapefile to a new file
-st_write(coho.CU.polygons, "coho.CU.ST.shp")
+##st_write(coho.CU.polygons, "coho.CU.ST.shp")
 
 # map just BC
 
@@ -284,7 +269,7 @@ sockeye.CU <- c("Shuswap Complex-Late Timing",  "Kamloops-Early Summer Timing", 
 sockeye.CU.polygons <- subset(sockeyeUTM, CU_NAME %in% sockeye.CU)
 
 # Write the subsetted shapefile to a new file
-st_write(sockeye.CU.polygons, "sockeye.CU.ST.shp")
+##st_write(sockeye.CU.polygons, "sockeye.CU.ST.shp")
 
 # map just BC
 
@@ -371,7 +356,7 @@ ggarrange(chinook.cu.st, coho.cu.st, sockeye.cu.st, ncol = 3, labels = c("Chinoo
 shapefile.sox.lines <- readOGR(dsn = "C:/Users/patch/OneDrive/Desktop/MSc-Culvert/GIS-Analysis/GIS-South-Thompson-Culverts", layer = "sockeye.spawning_lines_fraser")
 
 # Convert SpatialLinesDataFrame object to sf object
-shapefile.sox.lines.UTM_sf <- st_as_sf(shapefile.sox.lines.UTM)
+shapefile.sox.lines.UTM_sf <- st_as_sf(shapefile.sox.lines)
 
 shapefile.sox.lines<- st_transform(shapefile.sox.lines.UTM_sf, crs = 3157) # 3157 is the CRS for UTM zone 10
 str(shapefile.sox.lines)
@@ -408,7 +393,7 @@ sockeye.lines.CU <- c("river sockeye")
 sockeye.CU.lines <- subset(shapefile.sox.lines, Species %in% sockeye.lines.CU)
 
 # Write the subsetted shapefile to a new file
-st_write(sockeye.CU.lines, "sockeye.lines.CU.ST.shp")
+##st_write(sockeye.CU.lines, "sockeye.lines.CU.ST.shp")
 
 # zoom in.. 
 sockeye.lines.cu.st = ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = sockeye.CU.lines,  aes(fill = Species), show.legend = TRUE)+scale_x_continuous(limits = c(500, 1000)) +
@@ -431,9 +416,76 @@ sockeye.lines.cu.st
 
  # looks okay can cut it out if need be i suppose...
 
+ 
+ 
+watershed.bc <- readOGR(dsn = "C:/Users/patch/OneDrive/Desktop/MSc-Culvert/GIS-Analysis/GIS-South-Thompson-Culverts/FWA_NAMED_WATERSHEDS_POLY", layer = "FWNMDWTRSH_polygon")
+
+
+str(watershed.bc)
+
+# Convert SpatialLinesDataFrame object to sf object
+watershed.bc.sf <- st_as_sf(watershed.bc)
+
+watershed.bc.sf.UTM<- st_transform(watershed.bc.sf, crs = 3157) # 3157 is the CRS for UTM zone 10
+
+# convert UTM eastings and northings from metres into kilometres for all shapefiles
+watershed.bc.sf.UTM$geometry <- watershed.bc.sf.UTM$geometry/1000
+
+# put it on a map of BC
+str(watershed.bc.sf)
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = watershed.bc.sf.UTM,  aes(fill = GNIS_NAME))+scale_x_continuous(limits = c(0, 2000)) +
+  scale_y_continuous(limits = c(5000, 6000)) +
+  theme_bw()
+
+# select out the watershed i want South Thompson River
+
+# Create a vector of the polygon names you want to keep --> need to know the names of my polygons...
+souththompson.poly <- c("South Thompson River")
+
+# Subset the shapefile based on the polygon names
+south.thompson.poly <- subset(watershed.bc.sf.UTM, GNIS_NAME %in% souththompson.poly)
+
+# Write the subsetted shapefile to a new file
+st_write(south.thompson.poly, "south.thompson.shp")
+
+# zoomed in area
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = south.thompson.poly,  aes(fill = GNIS_NAME))+scale_x_continuous(limits = c(0, 2000)) +
+  scale_y_continuous(limits = c(5000, 6000)) +
+  theme_bw()
+
+
+# mess around by adding the watershed boundary with the CU... 
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = south.thompson.poly) + geom_sf(data = sockeye.CU.polygons,  aes(fill = CU_NAME), show.legend = TRUE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = south.thompson.poly) + geom_sf(data = coho.CU.polygons,  aes(fill = CU_NAME), show.legend = TRUE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+ggplot() + geom_sf(data = bcUTM, col = "black", fill = "grey75", lwd = 0.01) + geom_sf(data = south.thompson.poly) + geom_sf(data = chinook.CU.polygons,  aes(fill = CU_NAME), show.legend = TRUE)+scale_x_continuous(limits = c(500, 1000)) +
+  scale_y_continuous(limits = c(5400, 5800)) +
+  theme_bw() +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# Arrange the plots side by side
+
+plot_grid(chinook.cu.st, coho.cu.st, sockeye.cu.st, ncol = 3)
+
+ggarrange(chinook.cu.st, coho.cu.st, sockeye.cu.st, ncol = 3, labels = c("Chinook CU", "Coho CU", "Sockeye CU") ,common.legend = TRUE,legend = "bottom", widths = c(0.3, 0.3, 0.3),heights = c(0.5, 0.5, 0.2))
+
+#can probably do a snip of the watershed outside the south thompson... need to cut the sockeye coho and chinook ones...
+
+
+
 ```
 
-# want to buiild a map of our study area, thjat includes streams, CU for chinook, sockeye and coho, and overlays a gradient of barrier counts? or stream crossings in general? coudl be a nice visualization
+# want to buiild a map of our study area, thjat includes streams, CU for chinook, sockeye and coho, and overlays a gradient of barrier counts? or stream crossings in general? coudl be a nice visualization overlay watershed units from freshwater atlas... 
 
 ```
 
