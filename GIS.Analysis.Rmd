@@ -105,6 +105,10 @@ ggplot() +
   geom_sf(data = shapefile.chinook) +
   coord_sf(crs = st_crs(bc))
 
+# if i make changes here can I commit to git?
+
+# wahta baout now
+
 ```
 ```{r}
 # try with new shape file from the workshop..
