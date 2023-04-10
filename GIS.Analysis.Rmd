@@ -368,6 +368,7 @@ str(shapefile.sox.lines)
 # convert UTM eastings and northings from metres into kilometres for all shapefiles
 shapefile.sox.lines$geometry <- shapefile.sox.lines$geometry/1000
 
+bcUTM <- st_transform(bc, crs = 3157) # 3157 is the CRS for UTM zone 10
 
 # Plot lines as solid, and then zoom in... 
 ggplot() + 
@@ -501,6 +502,8 @@ ggarrange(chinook.cu.st, coho.cu.st, sockeye.cu.st, ncol = 3, labels = c("Chinoo
 ```{r}
 # lets try to do this myself...cause stupid gpt cant sort it out lolll  
 
+bc.ab = bc_neighbours() 
+
 bc <- bc_bound()
 
 plot(st_geometry(bc))
@@ -568,7 +571,7 @@ plot(bc_water_cropped)
 
 # Create the basemap
 bc_map <- ggplot() +
-  geom_sf(data = bc, fill = "grey85", col = "black", lwd = 0.1) +
+  geom_sf(data = bc, fill = "grey85", col = "black", lwd = 0.1) + geom_sf(data = bc_neighbours())+
   coord_sf(datum = NA) + geom_sf(data = watercourses_5M()) +
   geom_sf(data = bbox_sf_buffered, fill = NA, color = "red", size = 1.5)+
   theme_classic()
@@ -598,19 +601,122 @@ str(bc_map_cropped)
 # try to add them together 
 
 
-# Arrange the maps together
-ggarrange(
-  bc_map_cropped + theme_void(),  # Main map with no background
-  bc_map + theme_void(),          # Inset map with no background
-  widths = c(4, 1),               # Set the width ratio between the maps
-  heights = c(3, 1),              # Set the height ratio between the maps
-  ncol = 2,                       # Arrange the maps in two columns
-  nrow = 2,                       # Arrange the maps in two rows
-  left = "50%",                    # Shift the inset map to the left
-  top = "50%",                     # Shift the inset map to the top
-  bottom = "50%",                 # Shrink the height of the main map to make room for the inset map
-  legend = "none"                 # Remove the legend from both maps
-)
+
+
+```
+
+# try with bc and neighours... 
+
+```{r}
+# lets try to do this myself...cause stupid gpt cant sort it out lolll  
+
+bc.ab = bc_neighbours() 
+
+plot(st_geometry(bc))
+
+water5M = watercourses_5M()
+
+
+# add sites in... 
+
+Compliance_Study_Sites <- read_csv("C:/Users/patch/OneDrive/Desktop/MSc-Culvert/MSc-R-Git-CODING/MSc_Compliance_RStudio/Compliance-Study-Sites.csv")
+
+# need to clean up df by removing the doubles @ fortune, campbell
+
+Compliance_Study_Sites$Site <- ifelse(Compliance_Study_Sites$Site %in% c("DFO 2A", "DFO 2B"),
+                                      gsub("DFO 2A|DFO 2B", "DFO 2", Compliance_Study_Sites$Site),
+                                      Compliance_Study_Sites$Site)
+
+Compliance_Study_Sites$Site <- ifelse(Compliance_Study_Sites$Site %in% c("DFO 24A", "DFO 24B"),
+                                      gsub("DFO 24A|DFO 24B", "DFO 24", Compliance_Study_Sites$Site),
+                                      Compliance_Study_Sites$Site)
+
+Compliance_Study_Sites$Site <- ifelse(Compliance_Study_Sites$Site %in% c("DFO 4A", "DFO 4B"),
+                                      gsub("DFO 4A|DFO 4B", "DFO 4", Compliance_Study_Sites$Site),
+                                      Compliance_Study_Sites$Site)
+
+compliance.sites.clean = unique(Compliance_Study_Sites)
+
+
+#Convert the compliance.sites.clean data frame to an sf object
+compliance_sf <- st_as_sf(compliance.sites.clean, coords = c("Long", "Lat"), crs = 4326)
+
+# Transform the coordinates to BC Albers (EPSG code 3005)
+compliance_sf_transformed <- st_transform(compliance_sf, 3005)
+
+
+# Convert the compliance.sites.clean data frame to an sf object
+compliance_sf <- st_as_sf(compliance.sites.clean, coords = c("Long", "Lat"), crs = 4326)
+
+# Transform the coordinates to BC Albers (EPSG code 3005)
+compliance_sf_transformed <- st_transform(compliance_sf, 3005)
+
+# reproject compliance_sf_transformed to UTM
+compliance_sf_transformed <- st_transform(compliance_sf_transformed, 32610)
+
+# create a bounding box around the points in compliance_sf_transformed
+bbox <- st_bbox(compliance_sf_transformed)
+
+# crop bc to the extent of the buffered bounding box
+
+# convert bbox to sf object and buffer it
+bbox_sf <- st_as_sfc(bbox)
+bbox_sf_buffered <- st_buffer(bbox_sf, dist = 10000)
+
+# need to set to the same crs
+# Ensure that the spatial reference systems match
+bbox_sf_buffered <- st_transform(bbox_sf_buffered, st_crs(bc))
+
+bc_cropped <- st_crop(bc.ab, bbox_sf_buffered)
+bc_water_cropped <- st_crop(water5M, bc_cropped)
+
+plot(bc_water_cropped)
+
+# need to plot the basemap... 
+
+
+# Create the basemap
+bc_map <- ggplot() +
+  geom_sf(data = bc, fill = "grey85", col = "black", lwd = 0.1) + geom_sf(data = bc_neighbours())+
+  coord_sf(datum = NA) + geom_sf(data = watercourses_5M()) +
+  geom_sf(data = bbox_sf_buffered, fill = NA, color = "red", size = 1.5)+
+  theme_classic()
+
+bc_map
+
+# try to plot the bc cropped
+
+# Create the main map with some stream lines... Probs want majr lakes in bc too...
+
+bc_map_cropped <- ggplot() +
+  geom_sf(data = bc_cropped, fill = "grey85", col = "black", lwd = 0.1) +
+  coord_sf(datum = NA) +
+  geom_sf(data = compliance_sf_transformed, aes(color = remediation_class)) +
+  scale_colour_manual(values = c("#ff6700", "#c15ccb", "#057076"))+geom_sf(data = bc_water_cropped, col = "darkblue") +
+  theme_classic() +
+  theme(legend.position = "none") # remove legend
+
+bc_map_cropped
+
+# looking good so far... 
+
+# i want to have this plot surrounded by  a balck outline rectangle..
+
+str(bc_map_cropped)
+
+# try to add them together 
+
+# lets try to add in the lakes...from sockeye shapefile..
+
+
+# Create the basemap
+bc_map <- ggplot() +
+  geom_sf(data = bc, fill = "grey85", col = "black", lwd = 0.1) + geom_sf(data = bc_neighbours())+
+  coord_sf(datum = NA) + geom_sf(data = watercourses_5M()) +  geom_sf(data = lake.bc.sf.UTM)+
+  geom_sf(data = bbox_sf_buffered, fill = NA, color = "red", size = 1.5)+
+  theme_classic()
+
+bc_map
 
 
 

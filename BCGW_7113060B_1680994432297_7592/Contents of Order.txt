@@ -1,0 +1,15 @@
+
+------------------
+Order Details
+-----------------
+Order ID: 2278864
+Date: 20230408
+
+----------------------
+Feature Types
+-----------------------
+ - Freshwater Atlas Lakes in directory FWLKSPL
+
+----------------------------
+Packaged Products
+----------------------------
